@@ -41,3 +41,11 @@ def read_root():
     返回 API 欢迎信息
     """
     return {"message": "Welcome to the Visual Novel Backend API!"}
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    """
+    健康检查端点
+    返回服务器状态信息
+    """
+    return {"status": "healthy", "message": "Server is running"}

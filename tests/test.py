@@ -5,7 +5,7 @@ url = "https://api.dify.ai/v1/workflows/run"
 
 payload = {
     "inputs": {
-        "char_id": "许苗苗",
+        "char_id": "朱大强",
         "act_num": 1,
         "model_name": "qwen"
     },
