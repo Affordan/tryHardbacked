@@ -252,7 +252,7 @@ class GameEngine:
                 "success": True,
                 "monologue": monologue,
                 "character_id": character_id,
-                "current_phase": game_state.current_phase.value
+                "current_phase": game_state.current_phase
             }
             
         except Exception as e:
@@ -310,7 +310,7 @@ class GameEngine:
                 "questioner_id": questioner_id,
                 "qna_id": qna_entry.id,
                 "remaining_questions": game_state.max_qna_per_character_per_act - game_state.get_qna_count_for_character_act(character_id, game_state.current_act),
-                "current_phase": game_state.current_phase.value
+                "current_phase": game_state.current_phase
             }
             
         except Exception as e:
@@ -344,7 +344,7 @@ class GameEngine:
                 "submission_id": submission.id,
                 "mission_type": mission_type,
                 "player_id": player_id,
-                "current_phase": game_state.current_phase.value
+                "current_phase": game_state.current_phase
             }
             
         except Exception as e:
