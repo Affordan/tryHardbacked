@@ -6,7 +6,7 @@ for the game phase nodes defined in graph.py.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from app.langchain.state.models import GameState, GamePhase
 
 logger = logging.getLogger(__name__)

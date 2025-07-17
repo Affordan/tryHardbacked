@@ -4,9 +4,10 @@ import logging
 from typing import Dict, Any, Optional
 from enum import Enum
 from app.core.config import (
-    DIFY_API_URL, DIFY_API_KEY,
-    DIFY_QNA_WORKFLOW_URL, DIFY_QNA_WORKFLOW_API_KEY,
-    DIFY_MONOLOGUE_WORKFLOW_URL, DIFY_MONOLOGUE_WORKFLOW_API_KEY
+    DIFY_API_URL, DIFY_API_KEY,  # 向后兼容
+    DIFY_WORKFLOW_API_URL,
+    DIFY_QNA_WORKFLOW_API_KEY,
+    DIFY_MONOLOGUE_WORKFLOW_API_KEY
 )
 from app.schemas.pydantic_schemas import DialogueRequest
 
@@ -15,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 class DifyWorkflowType(str, Enum):
     """Enumeration of available Dify workflows."""
-    CHATFLOW = "chatflow"  # Original chat-messages API
     QNA_WORKFLOW = "qna_workflow"  # 查询并回答 workflow
     MONOLOGUE_WORKFLOW = "monologue_workflow"  # 简述自己的身世 workflow
 
@@ -73,9 +73,9 @@ def call_dify_workflow(
     user_id: str,
     max_retries: int = 3,
     timeout: int = 30
-) -> Dict[str, Any]:
+) -> str:
     """
-    调用 Dify 工作流 API
+    调用 Dify 工作流 API (支持流式响应)
 
     Args:
         workflow_type: 工作流类型
@@ -85,20 +85,21 @@ def call_dify_workflow(
         timeout: 请求超时时间（秒）
 
     Returns:
-        Dict: API 响应数据
+        str: 解析后的中文响应内容
 
     Raises:
         DifyServiceError: 当 API 调用失败时
     """
-    # 根据工作流类型选择配置
+    # 根据工作流类型选择API密钥
     if workflow_type == DifyWorkflowType.QNA_WORKFLOW:
-        api_url = DIFY_QNA_WORKFLOW_URL
         api_key = DIFY_QNA_WORKFLOW_API_KEY
     elif workflow_type == DifyWorkflowType.MONOLOGUE_WORKFLOW:
-        api_url = DIFY_MONOLOGUE_WORKFLOW_URL
         api_key = DIFY_MONOLOGUE_WORKFLOW_API_KEY
     else:
         raise DifyServiceError(f"Unsupported workflow type: {workflow_type}")
+
+    if not api_key:
+        raise DifyServiceError(f"API key not configured for workflow type: {workflow_type}")
 
     # 设置请求头
     headers = {
@@ -106,11 +107,11 @@ def call_dify_workflow(
         "Content-Type": "application/json",
     }
 
-    # 构建请求体
+    # 构建请求体 - 使用流式响应
     body = {
         "inputs": inputs,
         "user": user_id,
-        "response_mode": "blocking"
+        "response_mode": "streaming"
     }
 
     last_exception = None
@@ -120,22 +121,24 @@ def call_dify_workflow(
         try:
             logger.info(f"Calling Dify workflow {workflow_type}, attempt {attempt + 1}")
 
+            # 发送流式请求
             response = requests.post(
-                api_url,
+                DIFY_WORKFLOW_API_URL,
                 headers=headers,
                 json=body,
-                timeout=timeout
+                timeout=timeout,
+                stream=True
             )
             response.raise_for_status()
 
-            api_response = response.json()
+            # 设置UTF-8编码
+            response.encoding = 'utf-8'
 
-            # 验证响应格式
-            if not _validate_workflow_response(api_response):
-                raise DifyServiceError(f"Invalid response format from {workflow_type}")
+            # 解析流式响应
+            result_content = _parse_streaming_response(response)
 
             logger.info(f"Successfully called Dify workflow {workflow_type}")
-            return api_response
+            return result_content
 
         except requests.exceptions.Timeout as e:
             last_exception = e
@@ -189,14 +192,12 @@ def call_qna_workflow(
     }
 
     try:
-        response = call_dify_workflow(
+        # 直接返回流式响应解析的结果
+        answer = call_dify_workflow(
             DifyWorkflowType.QNA_WORKFLOW,
             inputs,
             user_id
         )
-
-        # 从响应中提取答案
-        answer = _extract_answer_from_response(response)
         return answer
 
     except DifyServiceError as e:
@@ -232,14 +233,12 @@ def call_monologue_workflow(
     }
 
     try:
-        response = call_dify_workflow(
+        # 直接返回流式响应解析的结果
+        monologue = call_dify_workflow(
             DifyWorkflowType.MONOLOGUE_WORKFLOW,
             inputs,
             user_id
         )
-
-        # 从响应中提取独白内容
-        monologue = _extract_answer_from_response(response)
         return monologue
 
     except DifyServiceError as e:
@@ -247,38 +246,72 @@ def call_monologue_workflow(
         return "抱歉，我暂时无法生成角色独白。"
 
 
-def _validate_workflow_response(response: Dict[str, Any]) -> bool:
+
+
+
+def _parse_streaming_response(response) -> str:
     """
-    验证工作流响应格式
+    解析Dify流式响应，提取中文内容
 
     Args:
-        response: API 响应数据
+        response: requests响应对象
 
     Returns:
-        bool: 响应格式是否有效
+        str: 解析后的中文内容
     """
-    # 检查必要的字段
-    if not isinstance(response, dict):
-        return False
+    import json
 
-    # 工作流响应通常包含 data 字段
-    if "data" not in response:
-        return False
+    result_parts = []
 
-    data = response["data"]
-    if not isinstance(data, dict):
-        return False
+    try:
+        # 遍历响应的每一行
+        for line in response.iter_lines(decode_unicode=True):
+            # SSE 事件通常以 "data: " 开头
+            if line and line.startswith('data: '):
+                # 移除 "data: " 前缀
+                json_string = line[len('data: '):]
 
-    # 检查是否有输出数据
-    if "outputs" not in data:
-        return False
+                # 流结束标记
+                if json_string.strip() == '[DONE]':
+                    break
 
-    return True
+                try:
+                    # 解析JSON数据
+                    data = json.loads(json_string)
+
+                    # 提取文本内容
+                    if 'event' in data and data['event'] == 'text_chunk':
+                        if 'data' in data and 'text' in data['data']:
+                            result_parts.append(data['data']['text'])
+                    elif 'event' in data and data['event'] == 'workflow_finished':
+                        # 工作流完成，可能包含最终结果
+                        if 'data' in data and 'outputs' in data['data']:
+                            outputs = data['data']['outputs']
+                            # 尝试从outputs中提取结果
+                            for key, value in outputs.items():
+                                if isinstance(value, str) and value.strip():
+                                    result_parts.append(value)
+
+                except json.JSONDecodeError:
+                    # 忽略无效的JSON行
+                    continue
+
+        # 合并所有文本片段
+        result = ''.join(result_parts).strip()
+
+        if not result:
+            return "抱歉，未能获取到有效响应。"
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to parse streaming response: {e}")
+        return "抱歉，响应解析失败。"
 
 
 def _extract_answer_from_response(response: Dict[str, Any]) -> str:
     """
-    从工作流响应中提取答案
+    从工作流响应中提取答案 (兼容旧版本)
 
     Args:
         response: API 响应数据

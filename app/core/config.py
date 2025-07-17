@@ -1,19 +1,18 @@
 import os
 
-# Dify AI API 配置
-# Dify API 接口地址，用于调用 AI 对话服务
+# Dify AI API 配置 (向后兼容，用于原始对话功能)
 DIFY_API_URL = os.getenv("DIFY_API_URL", "https://api.dify.ai/v1/chat-messages")
-# Dify API 密钥，需要从环境变量中获取
-DIFY_API_KEY = os.getenv("DIFY_API_KEY", "YOUR_DIFY_APP_API_KEY")
+DIFY_API_KEY = os.getenv("DIFY_API_KEY", "")
 
-# Dify Workflow API 配置 (for LangChain integration)
-# 查询并回答 workflow API endpoint
-DIFY_QNA_WORKFLOW_URL = os.getenv("DIFY_QNA_WORKFLOW_URL", "https://api.dify.ai/v1/workflows/run")
-DIFY_QNA_WORKFLOW_API_KEY = os.getenv("DIFY_QNA_WORKFLOW_API_KEY", "YOUR_QNA_WORKFLOW_API_KEY")
+# Dify Workflow API 配置 (统一工作流端点)
+# 所有Dify工作流使用统一的API端点
+DIFY_WORKFLOW_API_URL = os.getenv("DIFY_WORKFLOW_API_URL", "https://api.dify.ai/v1/workflows/run")
 
-# 简述自己的身世 workflow API endpoint
-DIFY_MONOLOGUE_WORKFLOW_URL = os.getenv("DIFY_MONOLOGUE_WORKFLOW_URL", "https://api.dify.ai/v1/workflows/run")
-DIFY_MONOLOGUE_WORKFLOW_API_KEY = os.getenv("DIFY_MONOLOGUE_WORKFLOW_API_KEY", "YOUR_MONOLOGUE_WORKFLOW_API_KEY")
+# 查询并回答工作流API密钥
+DIFY_QNA_WORKFLOW_API_KEY = os.getenv("DIFY_QNA_WORKFLOW_API_KEY", "")
+
+# 简述自己的身世工作流API密钥
+DIFY_MONOLOGUE_WORKFLOW_API_KEY = os.getenv("DIFY_MONOLOGUE_WORKFLOW_API_KEY", "")
 
 # LangChain 配置
 # LangSmith API key for tracing (optional)

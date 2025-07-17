@@ -30,9 +30,9 @@ class Script(ScriptBase):
 
     model_config = ConfigDict(from_attributes=True)  # 允许从数据库对象创建
 
-class ScriptListResponse(BaseModel):
-    """剧本列表响应模型"""
-    scripts: List[Script]  # 剧本列表
+# class ScriptListResponse(BaseModel):
+#     """剧本列表响应模型"""
+#     scripts: List[Script]  # 剧本列表
 
 class GameSessionCreate(BaseModel):
     """创建游戏会话的请求模型"""
@@ -52,6 +52,7 @@ class GameSession(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)  # 允许从数据库对象创建
 
+# Dialogue Request,默认是由用户发出，在当前幕次提问
 class DialogueRequest(BaseModel):
     """AI对话请求模型"""
     session_id: str  # 游戏会话ID
