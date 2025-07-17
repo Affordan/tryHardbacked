@@ -87,6 +87,7 @@ class GameActionRequest(BaseModel):
     player_id: Optional[str] = Field(None, description="执行动作的玩家ID")
     character_id: Optional[str] = Field(None, description="目标角色ID")
     question: Optional[str] = Field(None, description="问题内容 (用于qna动作)")
+    questioner_id: Optional[str] = Field(None, description="提问者ID (用于qna动作)")
     content: Optional[str] = Field(None, description="内容 (用于mission_submit动作)")
     mission_type: Optional[str] = Field("general", description="任务类型")
     target_phase: Optional[str] = Field(None, description="目标阶段 (用于advance_phase动作)")

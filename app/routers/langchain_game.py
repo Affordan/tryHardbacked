@@ -181,6 +181,7 @@ def process_game_action(
             "player_id": request.player_id,
             "character_id": request.character_id,
             "question": request.question,
+            "questioner_id": request.questioner_id,
             "content": request.content,
             "mission_type": request.mission_type,
             "target_phase": request.target_phase,
