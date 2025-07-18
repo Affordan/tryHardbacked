@@ -351,7 +351,46 @@ if db.query(Script).first() is None:
                 {"name": "退休教师", "avatar": "/placeholder.svg?height=60&width=60", "description": "充满智慧的退休老教师"},
                 {"name": "小男孩", "avatar": "/placeholder.svg?height=60&width=60", "description": "对音乐盒着迷的天真孩子"},
             ]
-        }
+        },
+        {
+  "id": "21",
+  "title": "家有儿女",
+  "category": "Emotional",
+  "tags": ["家庭", "情感", "现实"],
+  "players": "5人 (3男2女)",
+  "difficulty": 4,
+  "duration": "约3.5小时",
+  "author": "未知",
+  "description": "一位八旬的独居老人，在得知远方表亲去世后，伤心过度，醒来后却发现自己准备用于奔丧的二十万存款不翼而飞。他将两个儿子、女儿和儿媳召集回家，坚信是自家人所为。随着调查的深入，这个看似和睦的家庭背后，每个成员都隐藏着对金钱的迫切需求和不为人知的秘密。一笔消失的存款，即将揭开家庭成员间复杂、疏离又相互纠缠的关系真相。",
+  "characters": [
+    {
+      "name": "朱大强",
+      "avatar": "/placeholder.svg?height=60&width=60",
+      "description": "80岁的父亲，老伴已故，因丢失二十万存款将子女召集回家，希望能查明真相，让家人说实话。 "
+    },
+    {
+      "name": "朱丰翰",
+      "avatar": "/placeholder.svg?height=60&width=60",
+      "description": "31岁的大儿子，在国企工作。因看不惯弟弟总是跟父亲要钱而关系紧张，自己最近刚全款买了一辆二十万的车。 "
+    },
+    {
+      "name": "朱丰震",
+      "avatar": "/placeholder.svg?height=60&width=60",
+      "description": "29岁的二儿子，事业无成，总跟家人要钱创业。最近刚和朋友凑了二十万投资饭店，想向家人证明自己。 "
+    },
+    {
+      "name": "朱玲玲",
+      "avatar": "/placeholder.svg?height=60&width=60",
+      "description": "28岁的小女儿，与家人关系疏远。最近刚借给在大城市打工的男友二十万元。 "
+    },
+    {
+      "name": "许苗苗",
+      "avatar": "/placeholder.svg?height=60&width=60",
+      "description": "30岁的二儿媳，一名医生。感觉和丈夫关系奇怪，不久前因娘家急事汇款了二十万。 "
+    }
+  ]
+}
+        
     ]
 
     # 将所有剧本数据插入数据库（cover字段会通过SQLAlchemy事件监听器自动生成）
