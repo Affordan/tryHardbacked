@@ -65,7 +65,7 @@ class GamePhaseNodes:
         if target_phase in valid_transitions.get(current_phase, []):
             return True, "Valid transition"
         else:
-            return False, f"Cannot transition from {current_phase.value} to {target_phase.value}"
+            return False, f"Cannot transition from {current_phase} to {target_phase}"
     
     @staticmethod
     def should_advance_act(game_state: GameState) -> bool:
@@ -156,7 +156,7 @@ class GamePhaseNodes:
             "qna_progress": round(qna_progress, 1),
             "current_act": current_act,
             "total_acts": total_acts,
-            "current_phase": game_state.current_phase.value,
+            "current_phase": game_state.current_phase,
             "total_qna_current_act": current_act_qna,
             "max_qna_current_act": total_possible_qna
         }
@@ -179,7 +179,7 @@ class GamePhaseNodes:
         if current_phase == GamePhase.INITIALIZATION:
             actions.append({
                 "action_type": "advance_phase",
-                "target_phase": GamePhase.MONOLOGUE.value,
+                "target_phase": GamePhase.MONOLOGUE,
                 "description": "开始角色介绍阶段"
             })
         
@@ -194,7 +194,7 @@ class GamePhaseNodes:
             
             actions.append({
                 "action_type": "advance_phase",
-                "target_phase": GamePhase.QNA.value,
+                "target_phase": GamePhase.QNA,
                 "description": "进入问答阶段"
             })
         
@@ -228,21 +228,21 @@ class GamePhaseNodes:
             else:
                 actions.append({
                     "action_type": "advance_phase",
-                    "target_phase": GamePhase.FINAL_CHOICE.value,
+                    "target_phase": GamePhase.FINAL_CHOICE,
                     "description": "进入最终选择阶段"
                 })
         
         elif current_phase == GamePhase.MISSION_SUBMIT:
             actions.append({
                 "action_type": "advance_phase",
-                "target_phase": GamePhase.QNA.value,
+                "target_phase": GamePhase.QNA,
                 "description": "返回问答阶段"
             })
             
             if game_state.current_act >= game_state.max_acts:
                 actions.append({
                     "action_type": "advance_phase",
-                    "target_phase": GamePhase.FINAL_CHOICE.value,
+                    "target_phase": GamePhase.FINAL_CHOICE,
                     "description": "进入最终选择阶段"
                 })
         
@@ -254,7 +254,7 @@ class GamePhaseNodes:
             
             actions.append({
                 "action_type": "advance_phase",
-                "target_phase": GamePhase.COMPLETED.value,
+                "target_phase": GamePhase.COMPLETED,
                 "description": "结束游戏"
             })
         
@@ -276,7 +276,7 @@ class GamePhaseNodes:
         summary_lines = [
             f"游戏ID: {game_state.game_id}",
             f"剧本: {game_state.script_id}",
-            f"当前阶段: {game_state.current_phase.value}",
+            f"当前阶段: {game_state.current_phase}",
             f"第{game_state.current_act}幕 (共{game_state.max_acts}幕)",
             f"整体进度: {progress['overall_progress']}%",
             f"玩家数量: {len(game_state.players)}",

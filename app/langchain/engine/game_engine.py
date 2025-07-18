@@ -397,12 +397,12 @@ class GameEngine:
                     # Add log entry
                     game_state.add_public_log_entry(
                         "phase_change",
-                        f"游戏阶段变更为：{new_phase.value}"
+                        f"游戏阶段变更为：{new_phase}"
                     )
-                    
+
                     return {
                         "success": True,
-                        "new_phase": new_phase.value,
+                        "new_phase": new_phase,
                         "current_act": game_state.current_act
                     }
                     
