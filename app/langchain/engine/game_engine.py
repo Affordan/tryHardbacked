@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 
-from app.langchain.state.models import GameState, PlayerState, CharacterState, GamePhase
+from app.langchain.state.models import GameState, PlayerState, CharacterState, GamePhase, PlayerRole
 from app.langchain.state.manager import StateManager
 from app.langchain.tools.dify_tools import DifyMonologueTool, DifyQnATool
 from app.langchain.engine.graph import create_game_graph, GameGraphState
@@ -50,17 +50,18 @@ class GameEngine:
         
         logger.info("GameEngine initialized")
     
-    def start_new_game(self, script_id: str, user_id: Optional[str] = None) -> GameState:
+    def start_new_game(self, script_id: str, user_id: Optional[str] = None, ai_characters: Optional[List[Dict[str, str]]] = None) -> GameState:
         """
         Start a new game session.
-        
+
         Args:
             script_id: ID of the script to use for the game
             user_id: Optional user ID for the game session
-            
+            ai_characters: List of AI character assignments with character_id and model_name
+
         Returns:
             Initial game state
-            
+
         Raises:
             GameEngineError: If game creation fails
         """
@@ -87,7 +88,11 @@ class GameEngine:
             
             # Initialize characters from script
             self._initialize_characters(game_state, script)
-            
+
+            # Initialize AI characters if provided
+            if ai_characters:
+                self._initialize_ai_characters(game_state, ai_characters)
+
             # Save initial state
             if not self.state_manager.save_game_state(game_state):
                 raise GameEngineError("Failed to save initial game state")
@@ -232,12 +237,19 @@ class GameEngine:
                 return {"error": "Character ID required for monologue"}
             
             game_state = graph_state["game_state"]
-            
+
+            # Determine model name: use character's bound model or fallback to action/default
+            model_name = action.get("model_name", "gpt-3.5-turbo")
+            if character_id in game_state.characters:
+                character = game_state.characters[character_id]
+                if character.model_name:
+                    model_name = character.model_name
+
             # Generate monologue using Dify tool
             monologue = self.monologue_tool._run(
                 char_id=character_id,
                 act_num=game_state.current_act,
-                model_name=action.get("model_name", "gpt-3.5-turbo"),
+                model_name=model_name,
                 user_id=action.get("user_id", "system")
             )
             
@@ -270,17 +282,24 @@ class GameEngine:
                 return {"error": "Character ID, question, and questioner ID required for Q&A"}
             
             game_state = graph_state["game_state"]
-            
+
             # Check if Q&A is allowed for this character in current act
             if not game_state.can_ask_question(character_id, game_state.current_act):
                 return {"error": f"已达到角色 {character_id} 在第{game_state.current_act}幕的提问上限"}
-            
+
+            # Determine model name: use character's bound model or fallback to action/default
+            model_name = action.get("model_name", "gpt-3.5-turbo")
+            if character_id in game_state.characters:
+                character = game_state.characters[character_id]
+                if character.model_name:
+                    model_name = character.model_name
+
             # Generate answer using Dify tool
             answer = self.qna_tool._run(
                 char_id=character_id,
                 act_num=game_state.current_act,
                 query=question,
-                model_name=action.get("model_name", "gpt-3.5-turbo"),
+                model_name=model_name,
                 user_id=action.get("user_id", "system")
             )
             
@@ -401,7 +420,8 @@ class GameEngine:
                         character_id=char_data.get("name", "unknown"),
                         name=char_data.get("name", "Unknown"),
                         avatar=char_data.get("avatar", ""),
-                        description=char_data.get("description", "")
+                        description=char_data.get("description", ""),
+                        model_name=None  # Will be set later for AI characters
                     )
                     game_state.characters[character_state.character_id] = character_state
                     
@@ -433,7 +453,50 @@ class GameEngine:
                         "mission_count": len(game_state.mission_submissions)
                     })
             return summary
-            
         except Exception as e:
             logger.error(f"Failed to get game status for session {session_id}: {e}")
             return None
+
+    def _initialize_ai_characters(self, game_state: GameState, ai_characters: List[Dict[str, str]]) -> None:
+        """Initialize AI characters with model bindings and create virtual players."""
+        try:
+            for ai_char in ai_characters:
+                character_id = ai_char.get("character_id")
+                model_name = ai_char.get("model_name")
+
+                if not character_id or not model_name:
+                    logger.warning(f"Invalid AI character assignment: {ai_char}")
+                    continue
+
+                # Check if character exists
+                if character_id not in game_state.characters:
+                    logger.warning(f"Character {character_id} not found in game state")
+                    continue
+
+                # Bind model to character
+                game_state.characters[character_id].model_name = model_name
+
+                # Create virtual AI player
+                ai_player_id = f"ai_{character_id}_{uuid.uuid4().hex[:8]}"
+                ai_player = PlayerState(
+                    player_id=ai_player_id,
+                    character_id=character_id,
+                    player_type="ai",
+                    role=PlayerRole.PLAYER,
+                    is_active=True
+                )
+
+                game_state.players[ai_player_id] = ai_player
+
+                # Add public log entry for AI initialization
+                game_state.add_public_log_entry(
+                    "ai_character_initialized",
+                    f"AI角色 {character_id} 已加入游戏 (模型: {model_name})"
+                )
+
+                logger.info(f"Initialized AI character {character_id} with model {model_name}")
+
+            logger.info(f"Initialized {len(ai_characters)} AI characters for game {game_state.game_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize AI characters: {e}")

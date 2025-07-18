@@ -50,10 +50,22 @@ def start_new_game(
         # 创建游戏引擎实例
         game_engine = GameEngine(db)
         
+        # 转换AI角色分配为字典列表
+        ai_characters_dict = []
+        if request.ai_characters:
+            ai_characters_dict = [
+                {
+                    "character_id": ai_char.character_id,
+                    "model_name": ai_char.model_name
+                }
+                for ai_char in request.ai_characters
+            ]
+
         # 启动新游戏
         game_state = game_engine.start_new_game(
             script_id=request.script_id,
-            user_id=request.user_id
+            user_id=request.user_id,
+            ai_characters=ai_characters_dict
         )
         
         # 构建响应
@@ -72,12 +84,19 @@ def start_new_game(
             completed_at=game_state.completed_at
         )
         
+        # 计算可供人类玩家选择的角色（排除已分配给AI的角色）
+        ai_character_ids = {ai_char.character_id for ai_char in request.ai_characters} if request.ai_characters else set()
+        available_human_characters = [
+            char_id for char_id in game_state.characters.keys()
+            if char_id not in ai_character_ids
+        ]
+
         response = schemas.GameActionResponse(
             success=True,
-            message=f"游戏 {game_state.game_id} 创建成功",
+            message=f"游戏创建成功",
             data={
                 "session_id": game_state.session_id,
-                "available_characters": list(game_state.characters.keys())
+                "available_human_characters": available_human_characters
             },
             game_state=game_state_response
         )

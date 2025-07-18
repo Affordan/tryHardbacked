@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
 import math
 
 class CharacterInfo(BaseModel):
@@ -76,10 +77,25 @@ class ScriptListResponse(BaseModel):
 
 # LangChain Game Engine Schemas
 
+class ModelNameEnum(str, Enum):
+    """AI模型名称枚举"""
+    QWEN = "qwen"
+    KIMI = "kimi"
+    DEEPSEEK = "deepseek"
+    OPENAI = "openai"
+    GPT_3_5_TURBO = "gpt-3.5-turbo"
+    GPT_4 = "gpt-4"
+
+class AICharacterAssignment(BaseModel):
+    """AI角色分配模型"""
+    character_id: str = Field(..., description="角色ID")
+    model_name: str = Field(..., description="AI模型名称")
+
 class GameStartRequest(BaseModel):
     """启动新游戏的请求模型"""
     script_id: str = Field(..., description="剧本ID")
     user_id: Optional[str] = Field(None, description="用户ID")
+    ai_characters: List[AICharacterAssignment] = Field(default_factory=list, description="AI角色分配列表")
 
 class GameActionRequest(BaseModel):
     """游戏动作请求模型"""

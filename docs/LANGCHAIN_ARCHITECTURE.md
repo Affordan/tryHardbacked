@@ -112,8 +112,11 @@ result = tool._run(
 The game flow is managed by a LangGraph state machine with the following phases:
 
 ```
-INITIALIZATION → MONOLOGUE → QNA ⇄ MISSION_SUBMIT → FINAL_CHOICE → COMPLETED
-                     ↑         ↓
+                    
+                    ________________________
+                    ↓                       ↑ 
+INITIALIZATION → MONOLOGUE → QNA -> MISSION_SUBMIT → FINAL_CHOICE → COMPLETED
+                     ↑         ↓        
                      └─────────┘
 ```
 
