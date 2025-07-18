@@ -99,7 +99,7 @@ class GameStartRequest(BaseModel):
 
 class GameActionRequest(BaseModel):
     """游戏动作请求模型"""
-    action_type: str = Field(..., description="动作类型: monologue, qna, mission_submit, advance_phase")
+    action_type: str = Field(..., description="动作类型: monologue, qna, mission_submit, advance_phase, advance_act")
     player_id: Optional[str] = Field(None, description="执行动作的玩家ID")
     character_id: Optional[str] = Field(None, description="目标角色ID")
     question: Optional[str] = Field(None, description="问题内容 (用于qna动作)")

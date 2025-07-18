@@ -219,42 +219,41 @@ def monologue_node(state: GameGraphState) -> GameGraphState:
 def qna_node(state: GameGraphState) -> GameGraphState:
     """
     Handle Q&A phase.
-    
+
     Args:
         state: Current game graph state
-        
+
     Returns:
         Updated game graph state
     """
     try:
         logger.info("Processing Q&A phase")
-        
+
         game_state = state["game_state"]
         game_state.current_phase = GamePhase.QNA
-        
+
         # Get current action details
         action = state.get("current_action", {})
-        
+
         # The actual Q&A processing will be handled by the game engine
         # This node just manages the state transition
-        
-        # Determine next phase based on game progress
-        if action.get("action_type") == "advance_act":
-            if game_state.current_act >= game_state.max_acts:
-                state["next_phase"] = GamePhase.FINAL_CHOICE
-            else:
-                game_state.current_act += 1
-                state["next_phase"] = GamePhase.MONOLOGUE
-        elif action.get("action_type") == "submit_mission":
+
+        # Simplified logic - complex act advancement is handled by GameEngine
+        action_type = action.get("action_type")
+        if action_type == "mission_submit":
             state["next_phase"] = GamePhase.MISSION_SUBMIT
+        elif action_type == "advance_act":
+            # Act advancement logic is now handled in GameEngine._process_act_advance
+            # This will be processed there and phase will be updated accordingly
+            state["next_phase"] = game_state.current_phase  # Keep current phase for now
         else:
-            # Stay in Q&A phase
+            # Stay in Q&A phase for regular Q&A actions
             state["next_phase"] = GamePhase.QNA
-        
+
         logger.info(f"Q&A phase processed, next phase: {state['next_phase']}")
-        
+
         return state
-        
+
     except Exception as e:
         logger.error(f"Error in qna_node: {e}")
         state["error_message"] = f"处理问答环节时发生错误: {e}"

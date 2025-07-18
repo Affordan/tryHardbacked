@@ -216,6 +216,8 @@ class GameEngine:
                 result = self._process_mission_action(graph_state, action)
             elif action_type == "advance_phase":
                 result = self._process_phase_advance(graph_state, action)
+            elif action_type == "advance_act":
+                result = self._process_act_advance(graph_state, action)
             else:
                 result = {"error": f"Unknown action type: {action_type}"}
             
@@ -246,23 +248,34 @@ class GameEngine:
                     model_name = character.model_name
 
             # Generate monologue using Dify tool
-            monologue = self.monologue_tool._run(
+            monologue_raw_text = self.monologue_tool._run(
                 char_id=character_id,
                 act_num=game_state.current_act,
                 model_name=model_name,
                 user_id=action.get("user_id", "system")
             )
-            
-            # Add to public log
+
+            # 智能分段处理
+            sentences = [s.strip() for s in monologue_raw_text.split('\n\n') if s.strip()]
+
+            # 移除AI常见的结束语
+            if sentences and "我的话已经说完了" in sentences[-1]:
+                sentences.pop()
+
+            # 如果没有有效句子，使用原始文本作为单个句子
+            if not sentences:
+                sentences = [monologue_raw_text.strip()]
+
+            # Add to public log (使用原始文本)
             game_state.add_public_log_entry(
                 "monologue",
-                f"【{character_id}】{monologue}",
+                f"【{character_id}】{monologue_raw_text}",
                 related_character_id=character_id
             )
-            
+
             return {
                 "success": True,
-                "monologue": monologue,
+                "monologue_sentences": sentences,  # 替换原来的 "monologue" 字段
                 "character_id": character_id,
                 "current_phase": game_state.current_phase
             }
@@ -401,7 +414,46 @@ class GameEngine:
         except Exception as e:
             logger.error(f"Failed to process phase advance: {e}")
             return {"error": f"Failed to advance phase: {e}"}
-    
+
+    def _process_act_advance(self, graph_state: GameGraphState, action: Dict[str, Any]) -> Dict[str, Any]:
+        """Process act advancement."""
+        try:
+            game_state = graph_state["game_state"]
+
+            # 验证是否可以推进到下一幕
+            if game_state.current_act >= game_state.max_acts:
+                return {"error": f"已达到最大幕数 {game_state.max_acts}，无法继续推进"}
+
+            # 增加 current_act 计数器
+            game_state.current_act += 1
+
+            # 重置所有玩家的当幕Q&A计数
+            for player in game_state.players.values():
+                player.qna_count_current_act = 0
+
+            # 将游戏阶段重置为 MONOLOGUE
+            game_state.current_phase = GamePhase.MONOLOGUE
+
+            # 添加幕次变更的公开日志
+            game_state.add_public_log_entry(
+                "act_advance",
+                f"游戏推进到第 {game_state.current_act} 幕，所有玩家Q&A计数已重置"
+            )
+
+            logger.info(f"Game {game_state.game_id} advanced to act {game_state.current_act}")
+
+            return {
+                "success": True,
+                "new_act": game_state.current_act,
+                "current_phase": game_state.current_phase,
+                "max_acts": game_state.max_acts,
+                "players_reset": len(game_state.players)
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to process act advance: {e}")
+            return {"error": f"Failed to advance act: {e}"}
+
     def _load_script(self, script_id: str) -> Optional[Script]:
         """Load script from database."""
         try:
