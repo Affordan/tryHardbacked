@@ -17,7 +17,7 @@ app = FastAPI(
 
 # 配置跨域资源共享（CORS）中间件
 origins = [
-    "http://localhost:3000","http://localhost:3001"
+    "http://localhost:3000","http://localhost:3001","http://192.168.1.101:3000"
 ]
 # 允许前端应用从不同域名访问 API
 app.add_middleware(
