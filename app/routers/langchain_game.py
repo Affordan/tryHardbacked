@@ -206,7 +206,8 @@ def process_game_action(
             "target_phase": request.target_phase,
             "model_name": request.model_name,
             "user_id": request.user_id,
-            "is_public": request.is_public
+            "is_public": request.is_public,
+            "tell_truth": request.tell_truth
         }
         
         # 处理动作

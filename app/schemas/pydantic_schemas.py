@@ -99,7 +99,7 @@ class GameStartRequest(BaseModel):
 
 class GameActionRequest(BaseModel):
     """游戏动作请求模型"""
-    action_type: str = Field(..., description="动作类型: monologue, qna, mission_submit, advance_phase, advance_act")
+    action_type: str = Field(..., description="动作类型: monologue, qna, mission_submit, advance_phase, advance_act, final_choice")
     player_id: Optional[str] = Field(None, description="执行动作的玩家ID")
     character_id: Optional[str] = Field(None, description="目标角色ID")
     question: Optional[str] = Field(None, description="问题内容 (用于qna动作)")
@@ -110,6 +110,7 @@ class GameActionRequest(BaseModel):
     model_name: Optional[str] = Field("gpt-3.5-turbo", description="AI模型名称")
     user_id: Optional[str] = Field("system", description="用户ID")
     is_public: Optional[bool] = Field(True, description="是否公开 (用于qna动作)")
+    tell_truth: Optional[bool] = Field(None, description="用于 final_choice: 是否告知真相")
 
 class PlayerJoinRequest(BaseModel):
     """玩家加入游戏请求模型"""

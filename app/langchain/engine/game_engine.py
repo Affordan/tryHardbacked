@@ -218,6 +218,8 @@ class GameEngine:
                 result = self._process_phase_advance(graph_state, action)
             elif action_type == "advance_act":
                 result = self._process_act_advance(graph_state, action)
+            elif action_type == "final_choice":
+                result = self._process_final_choice(graph_state, action)
             else:
                 result = {"error": f"Unknown action type: {action_type}"}
             
@@ -453,6 +455,65 @@ class GameEngine:
         except Exception as e:
             logger.error(f"Failed to process act advance: {e}")
             return {"error": f"Failed to advance act: {e}"}
+
+    def _process_final_choice(self, graph_state: GameGraphState, action: Dict[str, Any]) -> Dict[str, Any]:
+        """Process final choice action."""
+        try:
+            game_state = graph_state["game_state"]
+
+            # Extract tell_truth boolean from action
+            tell_truth = action.get("tell_truth", False)
+            player_id = action.get("player_id", "unknown")
+
+            # Debug logging
+            logger.info(f"Final choice action received: {action}")
+            logger.info(f"Extracted tell_truth: {tell_truth} (type: {type(tell_truth)})")
+
+            # Define ending text based on truth/lie choice
+            if tell_truth:
+                ending_text = """（听完 "孩子们" 的话，点了点头，咳嗽两声）
+"丰翰啊，明儿跟你弟说说，别总瞎折腾，踏踏实实找个活儿干……"
+（转向 "玲玲"，声音软下来）
+"丫头别总往外跑，家里有热饭吃……"
+（又看向 "苗苗"，拍了拍床沿）
+"你跟丰震好好的，比啥都强……"
+（说着说着打了个哈欠，往被窝里缩了缩）
+"我睡会儿，醒了你们还在不？\""""
+            else:
+                ending_text = """（听完后沉默良久，喉咙里发出浑浊的气音，慢慢抬起布满老年斑的手抹了把脸）
+"我当是咋了…… 前儿个梦见丰震跟我要钱，我摸遍了兜都掏不出一个子儿，他转身就走了……"
+（喘了口气，眼神飘向窗外，像是在看很远的地方）
+"玲玲小时候总偷藏糖给我，现在怕是早忘了…… 丰翰打小就犟，跟他娘一个脾气……"
+（突然笑了，笑得肩膀发颤）
+"你们演得像，真像…… 就是吧…… 我这心里头啊，早就空了块地方，填啥都填不满喽……\""""
+
+            # Split ending text into lines for frontend display
+            ending_lines = [line.strip() for line in ending_text.split('\n') if line.strip()]
+
+            # Log the player's choice to game state
+            choice_description = "告知真相" if tell_truth else "隐瞒真相"
+            game_state.add_public_log_entry(
+                "final_choice",
+                f"玩家 {player_id} 选择了：{choice_description}",
+                related_character_id=player_id
+            )
+
+            # Mark game as completed
+            game_state.current_phase = GamePhase.COMPLETED
+
+            logger.info(f"Game {game_state.game_id} final choice processed: tell_truth={tell_truth}")
+
+            return {
+                "success": True,
+                "ending": ending_lines,
+                "choice": choice_description,
+                "tell_truth": tell_truth,
+                "current_phase": game_state.current_phase
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to process final choice: {e}")
+            return {"error": f"Failed to process final choice: {e}"}
 
     def _load_script(self, script_id: str) -> Optional[Script]:
         """Load script from database."""
