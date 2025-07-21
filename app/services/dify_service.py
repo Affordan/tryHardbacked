@@ -166,7 +166,8 @@ def call_qna_workflow(
     act_num: int,
     query: str,
     model_name: str,
-    user_id: str
+    user_id: str,
+    history: Optional[str] = None  # New parameter
 ) -> str:
     """
     调用查询并回答工作流
@@ -177,6 +178,7 @@ def call_qna_workflow(
         query: 查询问题
         model_name: 模型名称
         user_id: 用户ID
+        history: 游戏历史上下文（可选）
 
     Returns:
         str: AI 生成的回答
@@ -188,7 +190,8 @@ def call_qna_workflow(
         "char_id": char_id,
         "act_num": act_num,
         "query": query,
-        "model_name": model_name
+        "model_name": model_name,
+        "history": history or "没有历史记录。"  # Default fallback
     }
 
     try:
