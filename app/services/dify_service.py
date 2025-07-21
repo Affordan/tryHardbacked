@@ -165,9 +165,9 @@ def call_qna_workflow(
     char_id: str,
     act_num: int,
     query: str,
+    history: Optional[str],  # Add this parameter
     model_name: str,
-    user_id: str,
-    history: Optional[str] = None  # New parameter
+    user_id: str
 ) -> str:
     """
     调用查询并回答工作流

@@ -186,9 +186,9 @@ class DifyQnATool(BaseTool):
                 char_id=char_id,
                 act_num=act_num,
                 query=query,
+                history=history,  # Pass history to service layer
                 model_name=model_name,
-                user_id=user_id,
-                history=history  # Pass history to dify_service
+                user_id=user_id
             )
 
             logger.info(f"Successfully got answer from character {char_id}")

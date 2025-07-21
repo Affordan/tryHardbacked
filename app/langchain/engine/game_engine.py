@@ -312,14 +312,14 @@ class GameEngine:
             # CORE MODIFICATION: Auto-generate history context
             history_context = self._format_history_for_prompt(game_state)
 
-            # Generate answer using Dify tool with automatic history injection
+            # CRITICAL FIX: Pass history_context to the tool
             answer = self.qna_tool._run(
                 char_id=character_id,
                 act_num=game_state.current_act,
                 query=question,
                 model_name=model_name,
                 user_id=action.get("user_id", "system"),
-                history=history_context  # Automatic history injection
+                history=history_context  # This line was missing!
             )
             
             # Add Q&A entry to game state
