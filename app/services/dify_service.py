@@ -191,7 +191,6 @@ def call_qna_workflow(
     char_id: str,
     act_num: int,
     query: str,
-    history: Optional[str],  # Add this parameter
     model_name: str,
     user_id: str
 ) -> str:
@@ -204,7 +203,6 @@ def call_qna_workflow(
         query: 查询问题
         model_name: 模型名称
         user_id: 用户ID
-        history: 游戏历史上下文（可选）
 
     Returns:
         str: AI 生成的回答

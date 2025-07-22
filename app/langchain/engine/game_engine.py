@@ -309,17 +309,13 @@ class GameEngine:
                 if character.model_name:
                     model_name = character.model_name
 
-            # CORE MODIFICATION: Auto-generate history context
-            history_context = self._format_history_for_prompt(game_state)
-
-            # CRITICAL FIX: Pass history_context to the tool
+            # Generate answer using Dify tool
             answer = self.qna_tool._run(
                 char_id=character_id,
                 act_num=game_state.current_act,
                 query=question,
                 model_name=model_name,
-                user_id=action.get("user_id", "system"),
-                history=history_context  # This line was missing!
+                user_id=action.get("user_id", "system")
             )
             
             # Add Q&A entry to game state
@@ -518,32 +514,6 @@ class GameEngine:
         except Exception as e:
             logger.error(f"Failed to process final choice: {e}")
             return {"error": f"Failed to process final choice: {e}"}
-
-    def _format_history_for_prompt(self, game_state: GameState, max_entries: int = 10) -> str:
-        """Format recent game history as context string for AI responses."""
-
-        # Use public_log entries, sorted by timestamp
-        recent_logs = sorted(game_state.public_log[-max_entries:], key=lambda x: x.timestamp)
-
-        if not recent_logs:
-            return "这是游戏的初始阶段，还没有历史记录。"
-
-        history_lines = []
-        for entry in recent_logs:
-            if entry.entry_type == "monologue":
-                history_lines.append(f"[{entry.related_character_id} 进行了独白]: {entry.content}")
-            elif entry.entry_type == "qna":
-                # Parse Q&A from content
-                parts = entry.content.split('\n')
-                if len(parts) >= 2:
-                    question_part = parts[0].replace("【问】", "").strip()
-                    answer_part = parts[1].replace(f"【{entry.related_character_id}答】", "").strip()
-                    history_lines.append(f"[{entry.related_player_id} 问 {entry.related_character_id}]: {question_part}")
-                    history_lines.append(f"[{entry.related_character_id} 回答]: {answer_part}")
-            else:
-                history_lines.append(f"[事件]: {entry.content}")
-
-        return "--- 以下是最近发生的事情，请参考这些信息进行回答 ---\n" + "\n".join(history_lines)
 
     def _load_script(self, script_id: str) -> Optional[Script]:
         """Load script from database."""
