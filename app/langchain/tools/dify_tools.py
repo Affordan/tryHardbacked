@@ -161,32 +161,29 @@ class DifyQnATool(BaseTool):
         query: str,
         model_name: str,
         user_id: str,
-        history: Optional[str] = None,  # Internal parameter only
     ) -> str:
         """
         Execute the Q&A interaction.
-
+        
         Args:
             char_id: Character ID
             act_num: Act number
             query: Question to ask
             model_name: AI model name
             user_id: User ID
-            history: Game history context (internal use only)
             run_manager: Callback manager for tool execution
-
+            
         Returns:
             Character's response to the question
         """
         try:
             logger.info(f"Q&A for character {char_id}, act {act_num}: {query[:100]}...")
 
-            # Call the Dify Q&A workflow with history context
+            # Call the Dify Q&A workflow
             answer = call_qna_workflow(
                 char_id=char_id,
                 act_num=act_num,
                 query=query,
-                history=history,  # Critical: pass history to service layer
                 model_name=model_name,
                 user_id=user_id
             )

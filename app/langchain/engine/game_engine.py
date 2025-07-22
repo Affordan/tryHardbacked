@@ -309,31 +309,14 @@ class GameEngine:
                 if character.model_name:
                     model_name = character.model_name
 
-            # CORE MODIFICATION: Auto-generate history context
-            try:
-                history_context = self._format_history_for_prompt(game_state)
-
-                # Debug logging
-                logger.info(f"Generated history context length: {len(history_context)}")
-                logger.info(f"History context preview: {history_context[:200]}...")
-            except Exception as e:
-                logger.error(f"Failed to format history context: {e}")
-                history_context = "没有历史记录。"
-
-            # CRITICAL FIX: Pass history_context to the tool
-            try:
-                answer = self.qna_tool._run(
-                    char_id=character_id,
-                    act_num=game_state.current_act,
-                    query=question,
-                    model_name=model_name,
-                    user_id=action.get("user_id", "system"),
-                    history=history_context  # Must include this parameter
-                )
-                logger.info(f"QnA tool call successful for character {character_id}")
-            except Exception as e:
-                logger.error(f"QnA tool call failed for character {character_id}: {e}")
-                answer = f"抱歉，{character_id}暂时无法回答这个问题。请稍后再试。"
+            # Generate answer using Dify tool
+            answer = self.qna_tool._run(
+                char_id=character_id,
+                act_num=game_state.current_act,
+                query=question,
+                model_name=model_name,
+                user_id=action.get("user_id", "system")
+            )
             
             # Add Q&A entry to game state
             qna_entry = game_state.add_qna_entry(
@@ -531,32 +514,6 @@ class GameEngine:
         except Exception as e:
             logger.error(f"Failed to process final choice: {e}")
             return {"error": f"Failed to process final choice: {e}"}
-
-    def _format_history_for_prompt(self, game_state: GameState, max_entries: int = 10) -> str:
-        """Format recent game history as context string for AI responses."""
-
-        # Use public_log entries, sorted by timestamp
-        recent_logs = sorted(game_state.public_log[-max_entries:], key=lambda x: x.timestamp)
-
-        if not recent_logs:
-            return "这是游戏的初始阶段，还没有历史记录。"
-
-        history_lines = []
-        for entry in recent_logs:
-            if entry.entry_type == "monologue":
-                history_lines.append(f"[{entry.related_character_id} 进行了独白]: {entry.content}")
-            elif entry.entry_type == "qna":
-                # Parse Q&A from content
-                parts = entry.content.split('\n')
-                if len(parts) >= 2:
-                    question_part = parts[0].replace("【问】", "").strip()
-                    answer_part = parts[1].replace(f"【{entry.related_character_id}答】", "").strip()
-                    history_lines.append(f"[{entry.related_player_id} 问 {entry.related_character_id}]: {question_part}")
-                    history_lines.append(f"[{entry.related_character_id} 回答]: {answer_part}")
-            else:
-                history_lines.append(f"[事件]: {entry.content}")
-
-        return "--- 以下是最近发生的事情，请参考这些信息进行回答 ---\n" + "\n".join(history_lines)
 
     def _load_script(self, script_id: str) -> Optional[Script]:
         """Load script from database."""
