@@ -310,17 +310,30 @@ class GameEngine:
                     model_name = character.model_name
 
             # CORE MODIFICATION: Auto-generate history context
-            history_context = self._format_history_for_prompt(game_state)
+            try:
+                history_context = self._format_history_for_prompt(game_state)
+
+                # Debug logging
+                logger.info(f"Generated history context length: {len(history_context)}")
+                logger.info(f"History context preview: {history_context[:200]}...")
+            except Exception as e:
+                logger.error(f"Failed to format history context: {e}")
+                history_context = "没有历史记录。"
 
             # CRITICAL FIX: Pass history_context to the tool
-            answer = self.qna_tool._run(
-                char_id=character_id,
-                act_num=game_state.current_act,
-                query=question,
-                model_name=model_name,
-                user_id=action.get("user_id", "system"),
-                history=history_context  # This line was missing!
-            )
+            try:
+                answer = self.qna_tool._run(
+                    char_id=character_id,
+                    act_num=game_state.current_act,
+                    query=question,
+                    model_name=model_name,
+                    user_id=action.get("user_id", "system"),
+                    history=history_context  # Must include this parameter
+                )
+                logger.info(f"QnA tool call successful for character {character_id}")
+            except Exception as e:
+                logger.error(f"QnA tool call failed for character {character_id}: {e}")
+                answer = f"抱歉，{character_id}暂时无法回答这个问题。请稍后再试。"
             
             # Add Q&A entry to game state
             qna_entry = game_state.add_qna_entry(

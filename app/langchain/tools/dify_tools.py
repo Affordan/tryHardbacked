@@ -186,7 +186,7 @@ class DifyQnATool(BaseTool):
                 char_id=char_id,
                 act_num=act_num,
                 query=query,
-                history=history,  # Pass history to service layer
+                history=history,  # Critical: pass history to service layer
                 model_name=model_name,
                 user_id=user_id
             )

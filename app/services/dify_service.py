@@ -194,6 +194,10 @@ def call_qna_workflow(
         "history": history or "没有历史记录。"  # Default fallback
     }
 
+    # Debug logging to track parameter passing
+    logger.info(f"QnA workflow inputs: {inputs}")
+    logger.info(f"History parameter length: {len(history) if history else 0}")
+
     try:
         # 直接返回流式响应解析的结果
         answer = call_dify_workflow(
