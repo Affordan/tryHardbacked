@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine
 from app.models import database_models
-from app.routers import scripts, game_sessions, ai_dialogue
+from app.routers import scripts, game_sessions, ai_dialogue, langchain_game
 from fastapi.staticfiles import StaticFiles
 # 创建数据库表（如果不存在）
 database_models.Base.metadata.create_all(bind=engine)
@@ -17,7 +17,7 @@ app = FastAPI(
 
 # 配置跨域资源共享（CORS）中间件
 origins = [
-    "http://localhost:3000","http://localhost:3001"
+    "http://localhost:3000","http://localhost:3001","http://192.168.1.101:3000"
 ]
 # 允许前端应用从不同域名访问 API
 app.add_middleware(
@@ -32,6 +32,7 @@ app.add_middleware(
 app.include_router(scripts.router)  # 剧本管理相关路由
 app.include_router(game_sessions.router)  # 游戏会话相关路由
 app.include_router(ai_dialogue.router)  # AI对话相关路由
+app.include_router(langchain_game.router)  # LangChain游戏引擎相关路由
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 @app.get("/", tags=["Root"])
 def read_root():
@@ -40,3 +41,11 @@ def read_root():
     返回 API 欢迎信息
     """
     return {"message": "Welcome to the Visual Novel Backend API!"}
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    """
+    健康检查端点
+    返回服务器状态信息
+    """
+    return {"status": "healthy", "message": "Server is running"}

@@ -1,7 +1,42 @@
+# ===== 核心 Web 框架依赖 =====
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+
+# ===== 数据库和数据验证 =====
 sqlalchemy==2.0.23
-pydantic==2.5.0
+pydantic==2.11.7
+
+# ===== HTTP 客户端和安全 =====
 requests==2.31.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+
+# ===== LangChain 游戏引擎核心依赖 =====
+# LangChain 核心框架
+langchain>=0.3.26
+langchain-core>=0.3.68
+langchain-community>=0.3.27
+
+# LangGraph 状态机编排
+langgraph>=0.5.3
+
+# ===== 开发和测试依赖 =====
+# 测试框架
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+
+# 代码质量工具（可选）
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+
+# ===== 生产环境依赖（可选） =====
+# 性能监控
+# psutil>=5.9.0
+
+# 日志处理
+# python-json-logger>=2.0.0
+
+# 环境变量管理
+python-dotenv>=1.0.0

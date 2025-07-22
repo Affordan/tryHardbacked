@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict
-from typing import List, Optional, Dict
+from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
 import math
 
 class CharacterInfo(BaseModel):
@@ -30,9 +31,9 @@ class Script(ScriptBase):
 
     model_config = ConfigDict(from_attributes=True)  # 允许从数据库对象创建
 
-class ScriptListResponse(BaseModel):
-    """剧本列表响应模型"""
-    scripts: List[Script]  # 剧本列表
+# class ScriptListResponse(BaseModel):
+#     """剧本列表响应模型"""
+#     scripts: List[Script]  # 剧本列表
 
 class GameSessionCreate(BaseModel):
     """创建游戏会话的请求模型"""
@@ -52,6 +53,7 @@ class GameSession(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)  # 允许从数据库对象创建
 
+# Dialogue Request,默认是由用户发出，在当前幕次提问
 class DialogueRequest(BaseModel):
     """AI对话请求模型"""
     session_id: str  # 游戏会话ID
@@ -71,4 +73,129 @@ class ScriptListResponse(BaseModel):
     total: int
     page: int
     page_size: int
-    total_pages:int 
+    total_pages:int
+
+# LangChain Game Engine Schemas
+
+class ModelNameEnum(str, Enum):
+    """AI模型名称枚举"""
+    QWEN = "qwen"
+    KIMI = "kimi"
+    DEEPSEEK = "deepseek"
+    OPENAI = "openai"
+    GPT_3_5_TURBO = "gpt-3.5-turbo"
+    GPT_4 = "gpt-4"
+
+class AICharacterAssignment(BaseModel):
+    """AI角色分配模型"""
+    character_id: str = Field(..., description="角色ID")
+    model_name: str = Field(..., description="AI模型名称")
+
+class GameStartRequest(BaseModel):
+    """启动新游戏的请求模型"""
+    script_id: str = Field(..., description="剧本ID")
+    user_id: Optional[str] = Field(None, description="用户ID")
+    ai_characters: List[AICharacterAssignment] = Field(default_factory=list, description="AI角色分配列表")
+
+class GameActionRequest(BaseModel):
+    """游戏动作请求模型"""
+    action_type: str = Field(..., description="动作类型: monologue, qna, mission_submit, advance_phase, advance_act, final_choice")
+    player_id: Optional[str] = Field(None, description="执行动作的玩家ID")
+    character_id: Optional[str] = Field(None, description="目标角色ID")
+    question: Optional[str] = Field(None, description="问题内容 (用于qna动作)")
+    questioner_id: Optional[str] = Field(None, description="提问者ID (用于qna动作)")
+    content: Optional[str] = Field(None, description="内容 (用于mission_submit动作)")
+    mission_type: Optional[str] = Field("general", description="任务类型")
+    target_phase: Optional[str] = Field(None, description="目标阶段 (用于advance_phase动作)")
+    model_name: Optional[str] = Field("gpt-3.5-turbo", description="AI模型名称")
+    user_id: Optional[str] = Field("system", description="用户ID")
+    is_public: Optional[bool] = Field(True, description="是否公开 (用于qna动作)")
+    tell_truth: Optional[bool] = Field(None, description="用于 final_choice: 是否告知真相")
+
+class PlayerJoinRequest(BaseModel):
+    """玩家加入游戏请求模型"""
+    player_id: str = Field(..., description="玩家ID")
+    character_id: Optional[str] = Field(None, description="分配的角色ID")
+
+class GameStateResponse(BaseModel):
+    """游戏状态响应模型"""
+    game_id: str
+    script_id: str
+    session_id: str
+    current_act: int
+    current_phase: str
+    max_acts: int
+    player_count: int
+    character_count: int
+    created_at: datetime
+    updated_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+class GameActionResponse(BaseModel):
+    """游戏动作响应模型"""
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+    game_state: Optional[GameStateResponse] = None
+
+class QnAEntryResponse(BaseModel):
+    """问答条目响应模型"""
+    id: str
+    questioner_id: str
+    target_character_id: str
+    question: str
+    answer: str
+    act_number: int
+    timestamp: datetime
+    is_public: bool
+
+class MissionSubmissionResponse(BaseModel):
+    """任务提交响应模型"""
+    id: str
+    player_id: str
+    mission_type: str
+    content: str
+    status: str
+    act_number: int
+    timestamp: datetime
+    review_notes: str
+
+class PublicLogEntryResponse(BaseModel):
+    """公开日志条目响应模型"""
+    id: str
+    entry_type: str
+    content: str
+    act_number: int
+    timestamp: datetime
+    related_player_id: Optional[str] = None
+    related_character_id: Optional[str] = None
+
+class GameProgressResponse(BaseModel):
+    """游戏进度响应模型"""
+    overall_progress: float
+    act_progress: float
+    qna_progress: float
+    current_act: int
+    total_acts: int
+    current_phase: str
+    total_qna_current_act: int
+    max_qna_current_act: int
+
+class AvailableActionResponse(BaseModel):
+    """可用动作响应模型"""
+    action_type: str
+    description: str
+    character_id: Optional[str] = None
+    target_phase: Optional[str] = None
+    remaining_questions: Optional[int] = None
+
+class GameStatusResponse(BaseModel):
+    """游戏状态总览响应模型"""
+    game_state: GameStateResponse
+    progress: GameProgressResponse
+    available_actions: List[AvailableActionResponse]
+    recent_log_entries: List[PublicLogEntryResponse]
+    qna_history: List[QnAEntryResponse]
+    mission_submissions: List[MissionSubmissionResponse]
