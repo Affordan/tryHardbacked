@@ -101,6 +101,11 @@ def call_dify_workflow(
     if not api_key:
         raise DifyServiceError(f"API key not configured for workflow type: {workflow_type}")
 
+    # Validate and sanitize user_id to prevent 400 errors
+    if not user_id or not user_id.strip():
+        user_id = "anonymous_user"
+        logger.warning(f"Empty user_id provided, using fallback: {user_id}")
+
     # 设置请求头
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -110,7 +115,7 @@ def call_dify_workflow(
     # 构建请求体 - 使用流式响应
     body = {
         "inputs": inputs,
-        "user": user_id,
+        "user": user_id.strip(),  # Ensure no leading/trailing whitespace
         "response_mode": "streaming"
     }
 
@@ -121,6 +126,11 @@ def call_dify_workflow(
         try:
             logger.info(f"Calling Dify workflow {workflow_type}, attempt {attempt + 1}")
 
+            # Debug logging - log the complete request details
+            logger.info(f"Request URL: {DIFY_WORKFLOW_API_URL}")
+            logger.info(f"Request headers: {headers}")
+            logger.info(f"Request body: {body}")
+
             # 发送流式请求
             response = requests.post(
                 DIFY_WORKFLOW_API_URL,
@@ -129,6 +139,11 @@ def call_dify_workflow(
                 timeout=timeout,
                 stream=True
             )
+
+            # Log response details for debugging
+            logger.info(f"Response status code: {response.status_code}")
+            logger.info(f"Response headers: {dict(response.headers)}")
+
             response.raise_for_status()
 
             # 设置UTF-8编码
@@ -149,6 +164,17 @@ def call_dify_workflow(
         except requests.exceptions.RequestException as e:
             last_exception = e
             logger.error(f"Request error on attempt {attempt + 1} for {workflow_type}: {e}")
+
+            # Log detailed error response if available
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Error response status: {e.response.status_code}")
+                logger.error(f"Error response headers: {dict(e.response.headers)}")
+                try:
+                    error_body = e.response.text
+                    logger.error(f"Error response body: {error_body}")
+                except:
+                    logger.error("Could not read error response body")
+
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
 
@@ -184,11 +210,28 @@ def call_qna_workflow(
     Raises:
         DifyServiceError: 当工作流调用失败时
     """
+    # Validate required parameters to prevent 400 errors
+    if not user_id or not user_id.strip():
+        logger.warning("Empty user_id provided to call_qna_workflow")
+        user_id = "anonymous_user"
+
+    if not char_id or not char_id.strip():
+        logger.warning("Empty char_id provided to call_qna_workflow")
+        char_id = "unknown_character"
+
+    # Truncate history to meet Dify API requirements (max 256 characters)
+    processed_history = history or "没有历史记录。"
+    if len(processed_history) > 256:
+        # Smart truncation: try to keep the most recent and relevant information
+        processed_history = _truncate_history_smartly(processed_history, char_id)
+        logger.warning(f"History truncated from {len(history)} to {len(processed_history)} characters for Dify API")
+
     inputs = {
-        "char_id": char_id,
+        "char_id": char_id.strip() if char_id else "unknown_character",
         "act_num": act_num,
-        "query": query,
-        "model_name": model_name
+        "query": query or "",  # Ensure query is never None
+        "model_name": model_name or "gpt-3.5-turbo",  # Default model
+        "history": processed_history  # Truncated history
     }
 
     try:
@@ -226,10 +269,19 @@ def call_monologue_workflow(
     Raises:
         DifyServiceError: 当工作流调用失败时
     """
+    # Validate required parameters to prevent 400 errors
+    if not user_id or not user_id.strip():
+        logger.warning("Empty user_id provided to call_monologue_workflow")
+        user_id = "anonymous_user"
+
+    if not char_id or not char_id.strip():
+        logger.warning("Empty char_id provided to call_monologue_workflow")
+        char_id = "unknown_character"
+
     inputs = {
-        "char_id": char_id,
+        "char_id": char_id.strip() if char_id else "unknown_character",
         "act_num": act_num,
-        "model_name": model_name
+        "model_name": model_name or "gpt-3.5-turbo"  # Default model
     }
 
     try:
@@ -247,6 +299,65 @@ def call_monologue_workflow(
 
 
 
+
+
+def _truncate_history_smartly(history: str, char_id: str, max_length: int = 256) -> str:
+    """
+    智能截断历史记录，优先保留与当前角色相关的最新信息
+
+    Args:
+        history: 原始历史记录
+        char_id: 当前角色ID
+        max_length: 最大长度限制
+
+    Returns:
+        str: 截断后的历史记录
+    """
+    if len(history) <= max_length:
+        return history
+
+    # 保留一些空间给结尾标识符
+    target_length = max_length - 10
+
+    # 尝试按行分割，优先保留与当前角色相关的内容
+    lines = history.split('\n')
+
+    # 查找与当前角色相关的行
+    relevant_lines = []
+    other_lines = []
+
+    for line in lines:
+        if char_id in line:
+            relevant_lines.append(line)
+        else:
+            other_lines.append(line)
+
+    # 构建截断后的历史记录
+    result_lines = []
+    current_length = 0
+
+    # 首先添加与当前角色相关的最新内容
+    for line in reversed(relevant_lines):
+        if current_length + len(line) + 1 <= target_length:  # +1 for newline
+            result_lines.insert(0, line)
+            current_length += len(line) + 1
+        else:
+            break
+
+    # 如果还有空间，添加其他最新内容
+    for line in reversed(other_lines):
+        if current_length + len(line) + 1 <= target_length:
+            result_lines.insert(0, line)
+            current_length += len(line) + 1
+        else:
+            break
+
+    # 如果仍然太长，进行简单截断
+    result = '\n'.join(result_lines)
+    if len(result) > target_length:
+        result = result[:target_length]
+
+    return result + "...(历史记录已截断)"
 
 
 def _parse_streaming_response(response) -> str:
